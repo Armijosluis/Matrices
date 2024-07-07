@@ -1,38 +1,36 @@
 #include <stdio.h>
 
 int main() {
+	
+	   
+    printf("              **Elementos que no estan en las esquinas**\n");
     int matriz[3][3];
-    
-   matriz[0][0] = 4;
-    matriz[0][1] = 5;
-    matriz[0][2] = 2;
-    matriz[1][0] = 4;
-    matriz[1][1] = 3;
-    matriz[1][2] = 2;
-    matriz[2][0] = 7;
-    matriz[2][1] = 1;
-    matriz[2][2] = 0;
 
+    // Pedir al usuario que ingrese los 9 valores de la matriz en una sola línea
+    printf("Ingrese los 9 valores de la matriz 3x3 separados por espacios:");
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            scanf("%d", &matriz[i][j]);
+        }
+    }
 
     // Imprimir la matriz completa
-    printf("Matriz:\n");
+    printf("\nMatriz:\n");
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
             printf("%d ", matriz[i][j]);
         }
         printf("\n");
     }
-    
-			 
-    // los 4 elementos de la esquina no
-    printf("\n Todos los elementos de la mmatriz menos el de las esquinas :\n");
-    printf("  %d \n", matriz[0][1]),
 
-    printf("%d %d %d\n", matriz[1][0], matriz[1][1], matriz[1][2]);
+  
+   
+    // Imprimirlos elelemntos que no esten en las esquinas
+    printf("\nImprimir los elelemntos que no esten en las esquinas:\n");
+    printf("  %d\n", matriz[0][1]); // Elemento arriba
+    printf("%d %d %d\n", matriz[1][0], matriz[1][1], matriz[1][2]); // Fila central
+    printf("  %d\n", matriz[2][1]); // Elemento abajo
 
-    printf("  %d \n", matriz[2][1]);
-    
-			 
     return 0;
 }
 
