@@ -48,6 +48,56 @@ void generateRandomPosition(int *ax, int *ay, Position *body, int length) {
     } while (!validPosition);
 }
 
+void generateObstacles(bool obstacles[ROWS][COLS], int size) {
+    int obstacle_sizes[][2] = { {1, 3},{4, 4}, {9, 1}, {1, 9} };
+  
+    int num_sizes = sizeof(obstacle_sizes) / sizeof(obstacle_sizes[0]);
+
+    for (int i = 0; i < (ROWS * COLS) / size; i++) {
+        int size_index = rand() % num_sizes;
+        int obs_width = obstacle_sizes[size_index][0];
+        int obs_height = obstacle_sizes[size_index][1];
+
+        int obs_x = rand() % (COLS - obs_width + 1);
+        int obs_y = rand() % (ROWS - obs_height + 1);
+
+        for (int y = 0; y < obs_height; y++) {
+            for (int x = 0; x < obs_width; x++) {
+                obstacles[obs_y + y][obs_x + x] = true;
+            }
+        }
+    }
+}
+
+
+void initializeGame(bool obstacles[ROWS][COLS], Position a_positions[NUM_A], Position b_positions[NUM_B], int *x, int *y, int *length, char *direction, bool *game_started, int game_speed) {
+    // Inicializar las posiciones de las "A" y "B"
+    for (int i = 0; i < NUM_A; i++) {
+        generateRandomPosition(&a_positions[i].x, &a_positions[i].y, NULL, 0);
+    }
+    for (int i = 0; i < NUM_B; i++) {
+        generateRandomPosition(&b_positions[i].x, &b_positions[i].y, NULL, 0);
+    }
+
+    // Generar obstáculos solo para nivel 2
+    if (game_speed == 50) {
+        // Limpiar obstáculos existentes
+        for (int i = 0; i < ROWS; i++) {
+            for (int j = 0; j < COLS; j++) {
+                obstacles[i][j] = false;
+            }
+        }
+        generateObstacles(obstacles, 100); // Regenerar obstáculos
+    }
+
+    // Inicializar el estado del jugador
+    *x = 1 + rand() % (COLS - 2);
+    *y = 1 + rand() % (ROWS - 2);
+    *length = 1;
+    *direction = 'd'; // Dirección inicial: derecha
+    *game_started = false;
+}
+
 void showDifficultyMenu(int *speed) {
     system("cls");
 
@@ -64,7 +114,7 @@ void showDifficultyMenu(int *speed) {
                 *speed = 85;
                 return;
             case '2':
-                *speed = 10;
+                *speed = 50;
                 return;
             case '3':
                 exit(0);
@@ -80,7 +130,7 @@ int main() {
     int x, y; // Posición inicial del jugador
     Position body[ROWS * COLS]; // Cuerpo del jugador
     int length = 0; // Tamaño inicial del cuerpo del jugador
-    char direction = 'd'; // Dirección inicial: derecha
+    char direction = 'd'; // Dirección inicial
     bool game_started = false; // El juego no ha comenzado
     int game_speed = 100; // Velocidad por defecto (media)
 
@@ -93,10 +143,15 @@ int main() {
 
     int high_score = 0; // Variable para guardar el puntaje más alto alcanzado
 
-    while (1) {
-        x = 1 + rand() % (COLS - 2);
-        y = 1 + rand() % (ROWS - 2);
+    // Arreglo para controlar la posición de los obstáculos
+    bool obstacles[ROWS][COLS] = {0};
 
+    initializeGame(obstacles, a_positions, b_positions, &x, &y, &length, &direction, &game_started, game_speed);
+
+    clock_t start_time;
+    double elapsed_time = 0.0;
+
+    while (1) {
         // Generar posiciones aleatorias para "A" y "B"
         for (int i = 0; i < NUM_A; i++) {
             generateRandomPosition(&a_positions[i].x, &a_positions[i].y, body, length);
@@ -104,9 +159,6 @@ int main() {
         for (int i = 0; i < NUM_B; i++) {
             generateRandomPosition(&b_positions[i].x, &b_positions[i].y, body, length);
         }
-
-        clock_t start_time;
-        double elapsed_time = 0.0;
 
         while (1) {
             // Mostrar tiempo transcurrido
@@ -166,12 +218,20 @@ int main() {
                                     }
                                 }
                                 if (!printed) {
-                                    // Imprimir los espacios dentro del cuadro del juego
-                                    if (j > 0 && j < COLS - 1 && i > 0 && i < ROWS - 1 && !isBodyPart) {
-                                        setColor(FOREGROUND_GREEN); // Establecer color verde para los espacios dentro del cuadrado
-                                        printf(" ");
-                                        setColor(FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE); // Restaurar color para los elementos futuros
+                                    // Verificar si la celda es un obstáculo
+                                    if (obstacles[i][j]) {
+                                        setColor(FOREGROUND_BLUE); // Establecer color azul para los obstáculos
+                                        printf("\xDB");
+                                        setColor(FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE); // Restaurar color original
                                         printed = true;
+                                    } else {
+                                        // Imprimir los espacios dentro del cuadro del juego
+                                        if (j > 0 && j < COLS - 1 && i > 0 && i < ROWS - 1 && !isBodyPart) {
+                                            setColor(FOREGROUND_GREEN); // Establecer color verde para los espacios dentro del cuadrado
+                                            printf(" ");
+                                            setColor(FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE); // Restaurar color para los elementos futuros
+                                            printed = true;
+                                        }
                                     }
                                 }
                             }
@@ -206,9 +266,6 @@ int main() {
                             direction = 'd';
                             game_started = true;
                             break;
-                        case 'q':
-                            printf("Juego terminado.\n");
-                            return 0;
                     }
                 }
                 continue; // Saltar el resto del ciclo hasta que el juego comience
@@ -242,46 +299,50 @@ int main() {
                 }
             }
 
-            /// Mover el jugador en la dirección actual
-switch (direction) {
-    case 'w':
-        if (y > 1) {
-            y--;
-        } else {
-            game_over = true;
-        }
-        break;
-    case 'a':
-        if (x > 1) {
-            x--;
-        } else {
-            game_over = true;
-        }
-        break;
-    case 's':
-        if (y < ROWS - 2) {
-            y++;
-        } else {
-            game_over = true;
-        }
-        break;
-    case 'd':
-        if (x < COLS - 2) {
-            x++;
-        } else {
-            game_over = true;
-        }
-        break;
-}
+            // Mover el jugador en la dirección actual
+            switch (direction) {
+                case 'w':
+                    if (y > 1) {
+                        y--;
+                    } else {
+                        game_over = true;
+                    }
+                    break;
+                case 'a':
+                    if (x > 1) {
+                        x--;
+                    } else {
+                        game_over = true;
+                    }
+                    break;
+                case 's':
+                    if (y < ROWS - 2) {
+                        y++;
+                    } else {
+                        game_over = true;
+                    }
+                    break;
+                case 'd':
+                    if (x < COLS - 2) {
+                        x++;
+                    } else {
+                        game_over = true;
+                    }
+                    break;
+            }
 
-// Verificar colisión con el propio cuerpo del jugador
-for (int k = 1; k < length; k++) {
-    if (y == body[k].y && x == body[k].x) {
-        game_over = true;
-        break;
-    }
-}
+            // Verificar colisión con el propio cuerpo del jugador
+            for (int k = 1; k < length; k++) {
+                if (y == body[k].y && x == body[k].x) {
+                    game_over = true;
+                    break;
+                }
+            }
 
+            // Verificar colisión con los obstáculos del nivel 2
+            if (game_speed == 50 && obstacles[y][x]) {
+                game_over = true;
+            }
 
             // Verificar colisión con las "A"
             for (int k = 0; k < NUM_A; k++) {
@@ -313,9 +374,9 @@ for (int k = 1; k < length; k++) {
                             // Actualizar el puntaje más alto
                             if (length > high_score) {
                                 high_score = length;
-                                printf("¡Nuevo récord!\n");
+                                printf("Nuevo record\n");
                             } else {
-                                printf("Puntaje más alto: %d\n", high_score);
+                                printf("Puntaje mas alto: %d\n", high_score);
                             }
 
                             // Limpiar el cuerpo del jugador
@@ -323,17 +384,17 @@ for (int k = 1; k < length; k++) {
 
                             // Preguntar al usuario si desea volver a jugar o salir
                             printf("\n1. Volver a empezar\n");
-                            printf("2. Salir al menu\n");
+                            printf("2. Salir\n");
                             char option;
                             do {
                                 option = _getch();
                                 if (option == '1') {
-                                    game_over = true; // Salir del ciclo actual para reiniciar el juego
-                                    length = initial_player_size;
-                                    x = 1 + rand() % (COLS - 2);
-                                    y = 1 + rand() % (ROWS - 2);
-                                    direction = 'd'; // Dirección inicial: derecha
-                                    game_started = false; // Reiniciar el estado del juego
+                                    initializeGame(obstacles, a_positions, b_positions, &x, &y, &length, &direction, &game_started, game_speed);
+                                    // Limpiar el cuerpo del jugador
+                                    for (int i = 0; i < ROWS * COLS; i++) {
+                                        body[i].x = -1;
+                                        body[i].y = -1;
+                                    }
                                     break;
                                 } else if (option == '2') {
                                     return 0; // Salir al menú principal
@@ -376,7 +437,7 @@ for (int k = 1; k < length; k++) {
                     high_score = length;
                     printf("Nuevo record\n");
                 } else {
-                    printf("Puntaje mes alto: %d\n", high_score);
+                    printf("Puntaje mas alto: %d\n", high_score);
                 }
 
                 // Limpiar el cuerpo del jugador
@@ -389,12 +450,12 @@ for (int k = 1; k < length; k++) {
                 do {
                     option = _getch();
                     if (option == '1') {
-                        game_over = true; // Salir del ciclo actual para reiniciar el juego
-                        length = initial_player_size;
-                        x = 1 + rand() % (COLS - 2);
-                        y = 1 + rand() % (ROWS - 2);
-                        direction = 'd'; // Dirección inicial: derecha
-                        game_started = false; // Reiniciar el estado del juego
+                        initializeGame(obstacles, a_positions, b_positions, &x, &y, &length, &direction, &game_started, game_speed);
+                        // Limpiar el cuerpo del jugador
+                        for (int i = 0; i < ROWS * COLS; i++) {
+                            body[i].x = -1;
+                            body[i].y = -1;
+                        }
                         break;
                     } else if (option == '2') {
                         return 0; // Salir al menú principal
